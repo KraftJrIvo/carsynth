@@ -43,6 +43,7 @@ namespace areno
 		void _renderPointMasses();
 		void _renderPlanes();
 		void _renderBlocks();
+		void _renderLines();
 		void _render();
 	};
 }

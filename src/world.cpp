@@ -1,11 +1,14 @@
 #include "world.h"
+#include "util.h"
+#include "vec_funcs.h"
 
-#include <algorithm>
 #include <raylib.h>
 #include <raymath.h>
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
+#include <sstream>
 
 #define SUB_STEPS 4
 
@@ -64,6 +67,40 @@ void World::generate() {
     _car.push_back(p2);
     _car.push_back(p3);
     _car.push_back(p4);
+
+    _rtkPM = _addPointMass(PointMass({ 0, 0, 0 }, 0.01f, 0, 0, RED, true, false));
+    _gnssPM = _addPointMass(PointMass({ 0, 0, 0 }, 0.01f, 0, 0, YELLOW, true, false));
+    _imuPM = _addPointMass(PointMass({ 0, 0, 0 }, 0.01f, 0, 0, GREEN, true, false));
+    _o1dPM = _addPointMass(PointMass({ 0, 0, 0 }, 0.01f, 0, 0, SKYBLUE, true, false));
+}
+
+void World::dump() {
+    _recTime = 0;
+    _lastGNSStime = 0;
+    _lastRTKtime = 0;
+    _recDir = "";
+}
+
+void World::record(double dt) {
+    double RTK_FREQ = 0.0025;
+    double GNSS_FREQ = 0.2;
+    double GNSS_MIN_ERR = 0.02;
+    double GNSS_MAX_ERR = 2.0;
+
+    _recTime += dt;
+    size_t ts = 1714735849753723144 + _recTime * 1e9;
+
+    if (_recTime - _lastRTKtime > RTK_FREQ) {
+        _rtkPoses[ts] = _carMatrix;
+        _lastRTKtime = _recTime;
+    }
+    if (_recTime - _lastGNSStime > GNSS_FREQ) {
+        _gnssError += (rand() % 3 < 2) ? -0.01f : 0.01f;
+        _gnssError = std::clamp(_gnssError, GNSS_MIN_ERR, GNSS_MAX_ERR);
+        auto error = _gnssError * Vector3{ util::randFloat() * 2.0f - 1.0f, util::randFloat() * 2.0f - 1.0f, util::randFloat() * 2.0f - 1.0f };
+        _gnssPosesNcov[ts] = { _gnssPM->pos + error, float(_gnssError * _gnssError)};
+        _lastGNSStime = _recTime;
+    }
 }
 
 void World::updateCar(double dt) {
@@ -97,6 +134,10 @@ void World::updateCar(double dt) {
         for (auto& pm : _backWheels) {
             pm->applyForce(Vector3Normalize(Vector3RotateByAxisAngle(rgt, carup, _steer * PI/4)), -Vector3DotProduct(pm->vel, rgt) * 10.0f);
         }
+        for (auto& pm : _sensors) {
+            pm->applyForce(acc, _gas * 100.0f);
+            pm->applyForce(Vector3Normalize(Vector3RotateByAxisAngle(rgt, carup, _steer * PI / 4)), -Vector3DotProduct(pm->vel, rgt) * 10.0f);
+        }
     }
     for (auto& wl : _wheelLinks)
         wl->alignAxis = carup;
@@ -105,6 +146,54 @@ void World::updateCar(double dt) {
     for (auto& pm : _car)
         _carCenter += pm->pos;
     _carCenter = _carCenter / float(_car.size());
+    _frameCenter = Vector3Zero();
+    for (auto& pm : _framePMs)
+        _frameCenter += pm->pos;
+    _frameCenter = _frameCenter / float(_framePMs.size());
+
+    if (_sensors.size() == 0) {
+        _sensors = { _rtkPM, _gnssPM, _imuPM, _o1dPM };
+    }
+
+    Matrix newCarMatrix, newGNSSmatrix;
+
+    newCarMatrix.m0 = fwd.x; newCarMatrix.m4 = carup.x; newCarMatrix.m8  = rgt.x; newCarMatrix.m12 = _frameCenter.x;
+    newCarMatrix.m1 = fwd.y; newCarMatrix.m5 = carup.y; newCarMatrix.m9  = rgt.y; newCarMatrix.m13 = _frameCenter.y;
+    newCarMatrix.m2 = fwd.z; newCarMatrix.m6 = carup.z; newCarMatrix.m10 = rgt.z; newCarMatrix.m14 = _frameCenter.z;
+    newCarMatrix.m3 =     0; newCarMatrix.m7 =       0; newCarMatrix.m11 =     0; newCarMatrix.m15 =           1.0f;
+
+    newGNSSmatrix.m0 = fwd.x; newGNSSmatrix.m4 = carup.x; newGNSSmatrix.m8 =  rgt.x; newGNSSmatrix.m12 = _gnssPM->pos.x;
+    newGNSSmatrix.m1 = fwd.y; newGNSSmatrix.m5 = carup.y; newGNSSmatrix.m9 =  rgt.y; newGNSSmatrix.m13 = _gnssPM->pos.y;
+    newGNSSmatrix.m2 = fwd.z; newGNSSmatrix.m6 = carup.z; newGNSSmatrix.m10 = rgt.z; newGNSSmatrix.m14 = _gnssPM->pos.z;
+    newGNSSmatrix.m3 =     0; newGNSSmatrix.m7 =       0; newGNSSmatrix.m11 =     0; newGNSSmatrix.m15 =           1.0f;
+
+    auto IMUmat = MatrixMultiply(MatrixInvert(_config.T_gnss_imu), newGNSSmatrix);
+    auto prvprvIMUmat = MatrixMultiply(MatrixInvert(_config.T_gnss_imu), _gnssPrvPrvMatrix);
+    auto prvIMUmat = MatrixMultiply(MatrixInvert(_config.T_gnss_imu), _gnssMatrix);
+    auto relIMUmat = MatrixMultiply(MatrixInvert(prvIMUmat), IMUmat);
+    auto prvRotMat = prvIMUmat; prvRotMat.m12 = 0; prvRotMat.m13 = 0; prvRotMat.m14 = 0;
+    auto prvprvRotMat = prvprvIMUmat; prvprvRotMat.m12 = 0; prvprvRotMat.m13 = 0; prvprvRotMat.m14 = 0;
+    auto prvIMUrelVel = Vector3Transform(_imuPM->prvvel, MatrixInvert(prvprvRotMat));
+    auto curIMUrelVel = Vector3Transform(_imuPM->vel, MatrixInvert(prvRotMat));
+    _imuAcc = Vector3Transform(_imuPM->prvacc, MatrixInvert(prvRotMat));
+    auto relAA = Eigen::AngleAxisd(toEigen(QuaternionFromMatrix(relIMUmat)));
+    _imuGyr = fromEigen(relAA.axis() * relAA.angle()) / dt;
+    _IMUrelVel = curIMUrelVel;
+
+    
+    _carMatrix = newCarMatrix;
+    _gnssPrvPrvMatrix = _gnssMatrix;
+    _gnssMatrix = newGNSSmatrix;
+
+    _rtkPM->pos = _frameCenter;
+    _gnssPM->pos = Vector3Transform(_config.P_rtk_gnss, _carMatrix);
+
+    _imuPM->pos = Vector3{ IMUmat.m12, IMUmat.m13, IMUmat.m14 };
+    auto o1dmat = MatrixMultiply(_config.T_o1d_gnss, _gnssMatrix);
+    _o1dPM->pos = Vector3{ o1dmat.m12, o1dmat.m13, o1dmat.m14 };
+
+    if (_recording)
+        record(dt);
 }
 
 void World::update() {

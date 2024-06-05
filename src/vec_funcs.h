@@ -3,6 +3,8 @@
 #include "raylib.h"
 #include <string>
 #include <algorithm>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 Vector3 Vector3OrthogonalVector(const Vector3& v);
 Vector3 Vector3ProjectOntoPlane(const Vector3& o, const Vector3& normal, const Vector3& v);
@@ -15,3 +17,7 @@ Vector3 Vector3ClosestPointOnBox(Vector3 center, Vector3 size, Vector3 v, Vector
 Vector3 Vector3ClosestPointOnSphere(Vector3 center, float radius, Vector3 v);
 Vector3 Vector3RotateByMatrix(const Vector3& v, const Matrix& m);
 std::string Vector3ToString(const Vector3& v);
+Vector3 fromEigen(const Eigen::Vector3d& v);
+Eigen::Vector3d toEigen(const Vector3& v);
+Eigen::Matrix4d toEigen(const Matrix& v);
+Eigen::Quaterniond toEigen(const Quaternion& v);

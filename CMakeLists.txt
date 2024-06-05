@@ -8,8 +8,11 @@ project(CARSYNTH VERSION 1.0 DESCRIPTION "synthetic car sequence recorder" LANGU
 
 # TARGET
 set(CARSYNTH_SOURCE_FILES    
+    "src/converter.h"
+    "src/converter.cpp"
     "src/renderer.h"
     "src/renderer.cpp"
+    "src/ryml.hpp"
     "src/types.h"
     "src/types.cpp"
     "src/vec_ops.h"
@@ -19,12 +22,16 @@ set(CARSYNTH_SOURCE_FILES
     "src/world.cpp"
     "src/util.h"
     "src/util.cpp"
+    "src/parse.cpp"
     "src/main.cpp"
 )
 add_executable(CARSYNTH ${CARSYNTH_SOURCE_FILES})
 target_include_directories(CARSYNTH PUBLIC "src")
 
 # DEPENDENCIES
+find_package(Eigen3 CONFIG REQUIRED)
+target_link_libraries(CARSYNTH PUBLIC Eigen3::Eigen)
+
 set(RAYLIB_VERSION 5.0)
 find_package(raylib ${RAYLIB_VERSION} QUIET) # QUIET or REQUIRED
 if (NOT raylib_FOUND) # If there's none, fetch and build raylib

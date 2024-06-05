@@ -128,3 +128,28 @@ Vector3 Vector3RotateByMatrix(const Vector3 &v, const Matrix &m) {
 std::string Vector3ToString(const Vector3& v) {
     return "[" + std::to_string(v.x) + "," + std::to_string(v.y) + "," + std::to_string(v.z) + "]";
 }
+
+Vector3 fromEigen(const Eigen::Vector3d& v) {
+    return Vector3{(float)v.x(), (float)v.y(), (float)v.z()};
+}
+
+Eigen::Vector3d toEigen(const Vector3& v) {
+    return Eigen::Vector3d(v.x, v.y, v.z);
+}
+
+Eigen::Matrix4d toEigen(const Matrix& v) {
+    Eigen::Matrix4d mat;
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j)
+            mat(i, j) = at(v, i, j);
+    return mat;
+}
+
+Eigen::Quaterniond toEigen(const Quaternion& v) {
+    Eigen::Quaterniond q;
+    q.w() = v.w;
+    q.x() = v.x;
+    q.y() = v.y;
+    q.z() = v.z;
+    return q;
+}

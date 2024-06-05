@@ -2,10 +2,12 @@
 
 int main()
 {
-	areno::World w;
+	areno::WorldConfig config("calib.yaml");
+
+	areno::World w(config);
 	w.generate();
 
-	areno::Renderer r(w, {1024.0f, 1024.0f}, "ARENO");
+	areno::Renderer r(w, {1024.0f, 1024.0f}, "CARSYNTH");
 
 	while (!r.done) {
 		w.update();

@@ -38,14 +38,14 @@ namespace areno {
         float radius, friction, mass, bounce;
         Color color;
         bool fixed, collideable, collided;
-        Vector3 prv, mov, vel, acc;
+        Vector3 prv, prvprv, mov, vel, prvvel, acc, prvacc;
         float pdt = 0;
 
         PointMass(const Vector3& pos, float radius, float friction, float bounce, Color color, bool fixed, bool collideable) : 
             pos(pos), radius(radius), friction(friction),
             mass((4.0f / 3.0f) * 3.14159f * radius * radius * radius), 
             bounce(bounce), color(color), fixed(fixed), collideable(collideable), collided(false),
-            prv(pos), mov(Vector3Zero()), vel({0.0f, 0.0f}), acc({0.0f, 0.0f})
+            prv(pos), prvprv(pos), mov(Vector3Zero()), vel({0.0f, 0.0f, 0.0f }), prvvel({ 0.0f, 0.0f, 0.0f }), acc({ 0.0f, 0.0f, 0.0f }), prvacc({ 0.0f, 0.0f, 0.0f })
         { }
 
         void applyForce(Vector3 dir, float strength);

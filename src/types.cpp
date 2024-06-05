@@ -32,17 +32,20 @@ bool Block::contains(const Vector3& v) {
 }
 
 void PointMass::applyForce(Vector3 dir, float strength) {
-    if (!fixed)
-	    acc += dir * strength;    
+    //if (!fixed)
+	acc += dir * strength;    
 }
 
 void PointMass::update(double dt) {
-    if (fixed) return;
+    //if (fixed) return;
     mov = pos - prv;
+    prvvel = vel;
     vel = mov / ((pdt == 0) ? dt : pdt);
+    prvprv = prv;
     prv = pos;
-    pos += vel * dt + 0.5f * acc * dt * dt;
+    if (!fixed) pos += vel * dt + 0.5f * acc * dt * dt;
     pdt = dt;
+    prvacc = acc;
     acc = Vector3Zero();
 }
 

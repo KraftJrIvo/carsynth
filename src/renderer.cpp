@@ -207,6 +207,28 @@ void Renderer::_renderBlocks() {
     }
 }
 
+void Renderer::_renderLines() {
+    {
+        Matrix* prv = nullptr;
+        for (auto& pm : _w._rtkPoses) {
+            if (prv) {
+                Vector3 p1 = Vector3{ prv->m12,prv->m13,prv->m14 };
+                Vector3 p2 = Vector3{ pm.second.m12,pm.second.m13,pm.second.m14 };
+                DrawLine3D(p1, p2, RED);
+            }
+            prv = &pm.second;
+        }
+    }
+    {
+        Vector3* prv = nullptr;
+        for (auto& pm : _w._gnssPosesNcov) {
+            if (prv)
+                DrawLine3D(*prv, pm.second.first, YELLOW);
+            prv = &pm.second.first;
+        }
+    }
+}
+
 void Renderer::_render() {
     Vector3 rot = {GetMouseDelta().x*0.05f, GetMouseDelta().y*0.05f, 0.0f};
     bool shift = IsKeyDown(KEY_LEFT_SHIFT);
@@ -240,6 +262,17 @@ void Renderer::_render() {
     } else {
         UpdateCameraPro(&_cam, Vector3{ forwardsR.x + verticalR.x, forwardsR.y + sideways + verticalR.y, forwardsR.z + verticalR.z }, rot, 0.0f);
     }
+
+    if (IsKeyPressed(KEY_R)) {
+        if (_w._recording) {
+            _w._recording = false;
+            _w.dump();
+        } else {
+            _w._gnssPosesNcov.clear();
+            _w._rtkPoses.clear();
+            _w._recording = true;
+        }
+    }
     _w.unlock();
 
     BeginDrawing();
@@ -250,12 +283,20 @@ void Renderer::_render() {
         _renderPlanes();
         _renderBlocks();
         _renderPointMasses();
+        _renderLines();
 
         EndMode3D();
     }
     auto chTex = grabbedPML ? _chGrab : lookingAtPM ? _chHand : _chDefault;
     Vector2 chPos = grabbedPML ? GetWorldToScreen(grabbedPML->pm2->pos, _cam) : Vector2{GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f};
     DrawTexture(chTex, chPos.x - chTex.width * 0.5f, chPos.y - chTex.height * 0.5f, WHITE);
+    if (_w._recording) {
+        DrawCircle(100, 100, 50, RED);
+    }
+
+    DrawText(("acc x: " + std::to_string(_w._imuAcc.x)).c_str(), 10, 10, 30, BLACK);
+    DrawText(("acc y: " + std::to_string(_w._imuAcc.y)).c_str(), 10, 40, 30, BLACK);
+    DrawText(("acc z: " + std::to_string(_w._imuAcc.z)).c_str(), 10, 70, 30, BLACK);
 
     EndDrawing();
 }
