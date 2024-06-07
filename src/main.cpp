@@ -2,7 +2,7 @@
 
 int main()
 {
-	areno::WorldConfig config("calib.yaml");
+	areno::WorldConfig config("res/calib.yaml");
 
 	areno::World w(config);
 	w.generate();

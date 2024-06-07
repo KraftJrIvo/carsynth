@@ -294,9 +294,9 @@ void Renderer::_render() {
         DrawCircle(100, 100, 50, RED);
     }
 
-    DrawText(("acc x: " + std::to_string(_w._imuAcc.x)).c_str(), 10, 10, 30, BLACK);
-    DrawText(("acc y: " + std::to_string(_w._imuAcc.y)).c_str(), 10, 40, 30, BLACK);
-    DrawText(("acc z: " + std::to_string(_w._imuAcc.z)).c_str(), 10, 70, 30, BLACK);
+    DrawText(("a x: " + std::to_string(_w._imuGyr.x)).c_str(), 10, 10, 30, BLACK);
+    DrawText(("a y: " + std::to_string(_w._imuGyr.y)).c_str(), 10, 40, 30, BLACK);
+    DrawText(("a z: " + std::to_string(_w._imuGyr.z)).c_str(), 10, 70, 30, BLACK);
 
     EndDrawing();
 }

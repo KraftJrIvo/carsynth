@@ -173,12 +173,14 @@ void World::updateCar(double dt) {
     auto relIMUmat = MatrixMultiply(MatrixInvert(prvIMUmat), IMUmat);
     auto prvRotMat = prvIMUmat; prvRotMat.m12 = 0; prvRotMat.m13 = 0; prvRotMat.m14 = 0;
     auto prvprvRotMat = prvprvIMUmat; prvprvRotMat.m12 = 0; prvprvRotMat.m13 = 0; prvprvRotMat.m14 = 0;
-    auto prvIMUrelVel = Vector3Transform(_imuPM->prvvel, MatrixInvert(prvprvRotMat));
-    auto curIMUrelVel = Vector3Transform(_imuPM->vel, MatrixInvert(prvRotMat));
+    //auto prvIMUrelVel = Vector3Transform(_imuPM->prvvel, MatrixInvert(prvprvRotMat));
+    //_prvIMUrelVel = _IMUrelVel;
+    //auto curIMUrelVel = Vector3Transform(_imuPM->vel, MatrixInvert(prvRotMat));
     _imuAcc = Vector3Transform(_imuPM->prvacc, MatrixInvert(prvRotMat));
+
     auto relAA = Eigen::AngleAxisd(toEigen(QuaternionFromMatrix(relIMUmat)));
     _imuGyr = fromEigen(relAA.axis() * relAA.angle()) / dt;
-    _IMUrelVel = curIMUrelVel;
+    //_IMUrelVel = curIMUrelVel;
 
     
     _carMatrix = newCarMatrix;

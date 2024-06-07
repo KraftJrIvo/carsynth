@@ -81,7 +81,7 @@ namespace areno {
         Vector3 _carCenter = Vector3{0,0,0};
         Vector3 _frameCenter = Vector3{0,0,0};
         Matrix _carMatrix, _gnssMatrix, _gnssPrvPrvMatrix;
-        Vector3 _IMUrelVel;
+        Vector3 _IMUrelVel, _prvIMUrelVel;
         PointMassPtr _rtkPM, _gnssPM, _imuPM, _o1dPM;
         std::vector<PointMassPtr> _sensors;
         bool _recording = false;
