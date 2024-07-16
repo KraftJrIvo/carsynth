@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #include "raymath.h"
+#include "rcamera.h"
 #include "rlgl.h"
 
 #include <cmath>
@@ -230,17 +231,19 @@ void Renderer::_renderLines() {
 }
 
 void Renderer::_render() {
-    Vector3 rot = {GetMouseDelta().x*0.05f, GetMouseDelta().y*0.05f, 0.0f};
     bool shift = IsKeyDown(KEY_LEFT_SHIFT);
     float speed = SPEED * (shift ? FAST_COEFF : 1.0f);
+
     float forwards = ((IsKeyDown(KEY_W)) - (IsKeyDown(KEY_S))) * speed;
-    Vector3 dir = Vector3Normalize(Vector3{_cam.target.x - _cam.position.x, _cam.target.y - _cam.position.y, _cam.target.z - _cam.position.z});
-    float pitch = (dir.x * _cam.up.x + dir.y * _cam.up.y + dir.z * _cam.up.z) / (Vector3Length(dir));
-    Vector3 forwardsR = Vector3RotateByAxisAngle(Vector3{ forwards, 0, 0 }, Vector3{ 0, 1.0f, 0 }, -pitch);
     float sideways = ((IsKeyDown(KEY_D)) - (IsKeyDown(KEY_A))) * speed;
     float vertical = ((IsKeyDown(KEY_E)) - (IsKeyDown(KEY_Q))) * speed;
-    Vector3 verticalR = Vector3RotateByAxisAngle(Vector3{ 0, 0, vertical }, Vector3{ 0, 1.0f, 0 }, -pitch);
+    
+    Vector3 rot = {GetMouseDelta().x*0.05f, GetMouseDelta().y*0.05f, 0.0f};
 
+    Vector3 dir = Vector3Normalize(Vector3{_cam.target.x - _cam.position.x, _cam.target.y - _cam.position.y, _cam.target.z - _cam.position.z});
+    Vector3 flatFwd = GetCameraForward(&_cam); flatFwd.y = 0; flatFwd = Vector3Normalize(flatFwd);
+    float pitch = atan2(Vector3DotProduct(dir, _cam.up), Vector3DotProduct(dir, flatFwd));
+    Vector3 camUp = Vector3RotateByAxisAngle(Vector3{ 0, 0, vertical }, Vector3{ 0, 1.0f, 0 }, -pitch);
 
     _w.lock();
     if (IsKeyPressed(KEY_TAB))
@@ -260,7 +263,9 @@ void Renderer::_render() {
         _cam.target = _w._carCenter;
         //UpdateCameraPro(&_cam, Vector3{ forwardsR.x + verticalR.x, forwardsR.y + sideways + verticalR.y, forwardsR.z + verticalR.z }, rot, 0.0f);
     } else {
-        UpdateCameraPro(&_cam, Vector3{ forwardsR.x + verticalR.x, forwardsR.y + sideways + verticalR.y, forwardsR.z + verticalR.z }, rot, 0.0f);
+        UpdateCameraPro(&_cam, camUp, rot, 0.0f);
+        CameraMoveForward(&_cam, forwards, false);
+        CameraMoveRight(&_cam, sideways, false);
     }
 
     if (IsKeyPressed(KEY_R)) {
